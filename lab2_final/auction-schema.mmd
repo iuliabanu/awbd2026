@@ -1,0 +1,58 @@
+erDiagram
+PARTICIPANT ||--o{ PRODUCT : "sells"
+PRODUCT ||--o| INFO : "has details"
+PRODUCT ||--o{ PRODUCT_CATEGORY : "categorized by"
+CATEGORY ||--o{ PRODUCT_CATEGORY : "contains"
+PRODUCT ||--o{ OFFER : "receives offers for"
+PARTICIPANT ||--o{ OFFER : "makes offers as buyer"
+AUCTION ||--o{ PRODUCT : "includes"
+
+    PRODUCT {
+        Long id PK
+        String name
+        String code
+        Double reservePrice
+        Boolean restored
+        Long sellerId FK
+    }
+    
+    INFO {
+        Long id PK
+        byte[] photo
+        String description
+        Long productId FK
+    }
+    
+    CATEGORY {
+        Long id PK
+        String name
+    }
+    
+    PRODUCT_CATEGORY {
+        Long productId FK
+        Long categoryId FK
+    }
+    
+    PARTICIPANT {
+        Long id PK
+        String lastName
+        String firstName
+        Date birthDate
+    }
+    
+    OFFER {
+        Long id PK
+        Long participantId FK
+        Long productId FK
+        BigDecimal amount
+        Date offerTime
+        String status
+    }
+    
+    AUCTION {
+        Long id PK
+        String name
+        Date startTime
+        Date endTime
+        String status
+    }
