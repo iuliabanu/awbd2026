@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AWBD Auction</title>
+    <script src="/webjars/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/webjars/bootstrap/5.3.3/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/webjars/font-awesome/6.5.2/css/all.min.css"/>
+</head>
+<body>
+<div class="container">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="nav-link" th:href="@{'/'}"> <i class="fas fa-home mx-1"></i> </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent"
+                aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto topnav">
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{'/products'}">Products</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{'/categories'}">Categories</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn-primary" th:href="@{'/products/form'}">
+                        <i class="fas fa-plus-circle"></i> Sell
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto topnav">
+                <li class="nav-item">
+                    <a class="nav-link btn-primary" th:href="@{'/login'}">
+                        <i class="fas fa-sign-in-alt"></i> Sign In
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn-primary" th:href="@{'/participant/form'}">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</div>
+
+<div class="container mt-4">
+    <form enctype="multipart/form-data" method="post" th:action="@{/products}" th:object="${product}">
+        <input th:field="*{id}" type="hidden"/>
+        <input th:field="*{info.id}" type="hidden"/>
+        <input th:field="*{sellerId}" type="hidden"/>
+        <input th:field="*{info.photo}" type="hidden"/>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="fas fa-gavel me-2"></i>
+                    <span th:text="${product.id != null} ? 'Edit Product' : 'New Product'">Product</span>
+                </h5>
+            </div>
+
+            <div class="card-body">
+                <div class="row g-4">
+
+                    <!-- Left column: Categories -->
+                    <div class="col-md-2 border-end">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="fas fa-tags me-1"></i> Categories
+                        </h6>
+                        <ul id="categories" class="list-unstyled">
+                            <li class="mb-2" th:each="category: ${categoriesAll}">
+                                <div class="form-check">
+                                    <input class="form-check-input"
+                                           th:field="*{categoryIds}"
+                                           th:value="${category.id}"
+                                           type="checkbox"/>
+                                    <label class="form-check-label"
+                                           th:for="${#ids.prev('categoryIds')}"
+                                           th:text="${category.name}">
+                                    </label>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+
+                    <!-- Centre column: Product fields -->
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" th:for="name">Product Name</label>
+                            <input class="form-control" id="name" th:field="*{name}" type="text" placeholder="Enter product name"/>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" th:for="code">Product Code</label>
+                            <div th:if="${#fields.hasErrors('code')}" class="text-danger small mb-1" th:errors="*{code}">Error</div>
+                            <input class="form-control" id="code" th:field="*{code}" type="text" placeholder="Enter product code"/>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" th:for="reservePrice">Reserve Price</label>
+                            <div th:if="${#fields.hasErrors('reservePrice')}" class="text-danger small mb-1" th:errors="*{reservePrice}">Error</div>
+                            <div class="input-group">
+                                <span class="input-group-text"><i class="fas fa-coins"></i></span>
+                                <input class="form-control" id="reservePrice" th:field="*{reservePrice}" type="number" placeholder="0.00"/>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" th:for="currency">Currency</label>
+                            <select class="form-select" id="currency" th:field="*{currency}">
+                                <option th:each="currencyOpt:${T(com.awbd.lab4.domain.Currency).values()}"
+                                        th:value="${currencyOpt}"
+                                        th:text="${currencyOpt.getDescription()}">
+                                </option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" th:for="description">Description</label>
+                            <textarea class="form-control" id="description" th:field="*{info.description}"
+                                      rows="4" placeholder="Enter product description"></textarea>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" th:field="*{restored}" type="checkbox" id="restored"/>
+                                <label class="form-check-label fw-semibold" for="restored">Restored</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right column: Image upload -->
+                    <div class="col-md-4">
+                        <h6 class="text-uppercase text-muted fw-semibold mb-3">
+                            <i class="fas fa-image me-1"></i> Product Image
+                        </h6>
+                        <div class="text-center mb-3">
+                            <img id="pic"
+                                 th:src="${product.id != null} ? @{'/products/getimage/' + ${product.id}}"
+                                 class="img-fluid rounded border"
+                                 style="max-height: 220px; object-fit: contain; width: 100%;"
+                                 alt="Product image"/>
+                        </div>
+                        <label class="form-label fw-semibold" for="imagefile">Upload Image</label>
+                        <input class="form-control" accept="image/*" id="imagefile" name="imagefile" type="file"
+                               onchange="document.getElementById('pic').src = window.URL.createObjectURL(this.files[0])"/>
+                        <div class="form-text">Accepted formats: JPG, PNG, GIF</div>
+                    </div>
+
+                </div><!-- /row -->
+            </div><!-- /card-body -->
+
+            <div class="card-footer d-flex justify-content-end gap-2">
+                <a class="btn btn-outline-secondary" th:href="@{/products}">
+                    <i class="fas fa-times me-1"></i> Cancel
+                </a>
+                <button class="btn btn-primary" type="submit">
+                    <i class="fas fa-save me-1"></i> Save
+                </button>
+            </div>
+        </div><!-- /card -->
+
+    </form>
+</div>
+
+</body>
+</html>
+
