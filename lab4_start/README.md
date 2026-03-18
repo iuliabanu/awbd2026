@@ -1032,3 +1032,13 @@ public void testSaveOrUpdate_WithValidProductAndNoFile_ShouldSaveProduct() throw
 [5] https://www.baeldung.com/entity-to-and-from-dto-for-a-java-spring-application
 
 [6] https://www.baeldung.com/java-performance-mapping-frameworks
+
+
+### Development Notes
+
+Code documentation and Thymeleaf templates developed with assistance from Claude AI (Anthropic).
+
+```
+Anthropic. (2026). Claude [claude-sonnet-4-5-20250929]. 
+https://claude.ai
+```
