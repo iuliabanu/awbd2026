@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <title>AWBD Auction</title>
+
+    <script src="/webjars/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/webjars/bootstrap/5.3.3/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/webjars/font-awesome/6.5.2/css/all.min.css"/>
+</head>
+<body>
+<div class="container">
+    <nav class="navbar navbar-expand-lg navbar-light bg-light">
+        <a class="nav-link" th:href="@{'/'}"> <i class="fas fa-home mx-1"></i>  </a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarSupportedContent" aria-controls="navbarSupportedContent" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarSupportedContent">
+            <ul class="navbar-nav ml-auto topnav">
+                <li class="nav-item">
+                    <a class="nav-link active" th:href="@{'/products'}">Products</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" th:href="@{'/categories'}">Categories</a>
+                </li>
+                <li sec:authorize="hasRole('ADMIN')" class="nav-item">
+                    <a class="nav-link btn-primary" th:href="@{'/products/form'}">
+                        <i class="fas fa-plus-circle"></i> Sell
+                    </a>
+                </li>
+            </ul>
+            <ul class="navbar-nav ms-auto topnav">
+                <li class="nav-item">
+                    <a class="nav-link btn-primary" th:href="@{'/login'}">
+                        <i class="fas fa-sign-in-alt"></i> Sign In
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link btn-primary" th:href="@{'/participant/form'}">
+                        <i class="fas fa-user-plus"></i> Register
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <form id="logout-form" th:action="@{/logout}" method="post">
+                        <button type="submit" class="nav-link btn-primary">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </form>
+                </li>
+            </ul>
+        </div>
+    </nav>
+</div>
+
+<div class="container mt-4">
+    <div class="card shadow-sm">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="fas fa-list me-2"></i> Products
+            </h5>
+            <a class="btn btn-light btn-sm" th:href="@{'/products/form'}">
+                <i class="fas fa-plus-circle me-1"></i> Sell
+            </a>
+        </div>
+
+        <div class="card-body p-0">
+            <table class="table table-hover table-striped mb-0">
+                <thead class="table-dark">
+                <tr>
+                    <th scope="col">#</th>
+                    <th scope="col">Name</th>
+                    <th scope="col">Code</th>
+                    <th scope="col">Reserve Price</th>
+                    <th scope="col">Best Offer</th>
+                    <th scope="col" class="text-center" style="width: 90px;">Actions</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="product : ${products}">
+                    <td class="align-middle" th:text="${product.id}">1</td>
+                    <td class="align-middle fw-semibold" th:text="${product.name}">Product 1</td>
+                    <td class="align-middle" th:text="${product.code}">Code</td>
+                    <td class="align-middle" th:text="${product.reservePrice}">0.00</td>
+                    <td class="align-middle" th:text="${product.reservePrice}">0.00</td>
+                    <td class="align-middle text-center">
+                        <a class="btn btn-sm btn-outline-primary me-1"
+                           th:href="@{'/products/edit/' + ${product.id}}"
+                           title="Edit">
+                            <i class="fa-solid fa-pen"></i>
+                        </a>
+                        <a class="btn btn-sm btn-outline-danger"
+                           th:href="@{'/products/delete/' + ${product.id}}"
+                           title="Delete"
+                           onclick="return confirm('Delete this product?')">
+                            <i class="fa-solid fa-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                <tr th:if="${#lists.isEmpty(products)}">
+                    <td colspan="6" class="text-center text-muted py-4">
+                        <i class="fas fa-box-open me-2"></i>No products found.
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+
+        <div class="card-footer text-muted small">
+            <span th:text="${#lists.size(products)} + ' product(s) listed'">0 product(s) listed</span>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
