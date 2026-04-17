@@ -68,6 +68,18 @@ $SUBSCRIPTION_ID="your-subscription-id-or-name"
 az account set --subscription $SUBSCRIPTION_ID
 ```
 
+Register the `Microsoft.ContainerService` resource provider before creating any AKS resources.
+On student and new Azure subscriptions this provider is not registered by default — without it, all `az aks` commands fail with a `MissingSubscriptionRegistration` error.
+Registration is a one-time operation per subscription.
+
+```powershell
+az provider register --namespace Microsoft.ContainerService
+ 
+# Wait for registration to complete (takes ~1 minute)
+az provider show --namespace Microsoft.ContainerService --query "registrationState"
+# Expected output: "Registered"
+```
+
 ### Step 2: Create a resource group
 
 Set the resource group name, location, and cluster name.
@@ -75,7 +87,7 @@ Set the resource group name, location, and cluster name.
 ```powershell
 # Variables
 $RESOURCE_GROUP="azurek8-rg"
-$LOCATION="westeurope"
+$LOCATION="polandcentral"
 $CLUSTER_NAME="azurek8-cluster"
 
 
@@ -89,19 +101,20 @@ az group create `
 
 Create:
 - a basic AKS cluster named `azurek8-cluster`
-- AKS node auto-provisioning with the default [Karpenter-backed](https://karpenter.sh/) node pools
+- `Standard_D2s_v3` VM size (2 vCPU, 8 GB RAM) which is commonly available in free-tier subscriptions
 
-> For demo purposes, use AKS node auto-provisioning instead of a fixed `--node-count` value.
+> For demo purposes, use AKS node auto-provisioning instead of a fixed `--node-count` value. - AKS node auto-provisioning with the default [Karpenter-backed](https://karpenter.sh/) node pools
 
 ```powershell
 # Create a basic AKS cluster with node auto-provisioning enabled
 az aks create `
-  --resource-group $RESOURCE_GROUP `
-  --name $CLUSTER_NAME `
-  --generate-ssh-keys `
-  --tier free `
-  --node-provisioning-mode Auto `
-  --node-provisioning-default-pools Auto
+--resource-group $RESOURCE_GROUP `
+--name $CLUSTER_NAME `
+--location $LOCATION `
+--node-count 2 `
+--node-vm-size Standard_D2s_v3 `
+--tier free `
+--generate-ssh-keys
 ```
 
 ### Step 4: Switch to the AKS context
@@ -141,8 +154,8 @@ Apply manifests in the same order used in product-api demo.
 
 ```powershell
 # Shared secrets (MySQL + Redis/Envoy connection settings)
-kubectl apply -f secrets.yaml
 kubectl apply -f namespaces.yaml
+kubectl apply -f secrets.yaml
 
 # MySQL
 kubectl apply -f mysql/mysql-statefulset.yaml
@@ -159,26 +172,28 @@ kubectl apply -f redis/envoy-service.yaml
 
 # Spring Boot API deployment + service
 kubectl apply -f springbootapp/springbootapp-deployment.yaml
-kubectl apply -f springbootapp/springbootapp-service.yaml
+kubectl apply -f springbootapp/springbootapp-service-loadbalancer.yaml
 ```
 
 Check rollout and resource health:
 
 ```powershell
-kubectl rollout status statefulset/mysql
-kubectl rollout status statefulset/sharded-redis
-kubectl rollout status deployment/envoy
-kubectl rollout status deployment/product-api
+kubectl rollout status statefulset/mysql -n data
+kubectl rollout status statefulset/sharded-redis -n data
+kubectl rollout status deployment/envoy -n data
+kubectl rollout status deployment/product-api -n app
 
-kubectl get pods
-kubectl get svc
-kubectl get endpoints redis
+kubectl get pods -n data
+kubectl get pods -n app
+kubectl get svc -n data
+kubectl get svc -n app
+kubectl get endpoints redis -n data
 ```
 
 Get the public endpoint for `product-api` (AKS LoadBalancer):
 
 ```powershell
-kubectl get svc product-api -w
+kubectl get svc product-api -w -n app
 ```
 
 When `EXTERNAL-IP` is assigned, test the API:
@@ -186,22 +201,28 @@ When `EXTERNAL-IP` is assigned, test the API:
 ```powershell
 $APP_IP="<external-ip>"
 
-curl.exe -X POST "http://$APP_IP/api/products" `
-  -H "Content-Type: application/json" `
-  -d '{"name":"Laptop","description":"High-performance laptop","price":1299.99,"quantity":50}'
+# POST a new product
+$body = @{
+  name        = "Laptop"
+  description = "High-performance laptop"
+  price       = 1299.99
+  quantity    = 50
+} | ConvertTo-Json
 
-curl.exe "http://$APP_IP/api/products/1"
+Invoke-RestMethod -Uri "http://$APP_IP/api/products" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
 
-curl.exe -X PUT "http://$APP_IP/api/products/1" `
-  -H "Content-Type: application/json" `
-  -d '{"name":"Gaming Laptop","description":"High-end gaming laptop","price":1599.99,"quantity":30}'
+# GET product by ID
+Invoke-RestMethod -Uri "http://$APP_IP/api/products/1" -Method Get
 ```
 
 If you update the image or configuration later:
 
 ```powershell
-kubectl rollout restart deployment/product-api
-kubectl rollout status deployment/product-api
+kubectl rollout restart deployment/product-api -n app
+kubectl rollout status deployment/product-api -n app
 ```
 
 #### Optional monitoring steps (Prometheus + Grafana)
@@ -221,10 +242,10 @@ Enable Redis exporter sidecar and Prometheus scrape config:
 
 ```powershell
 kubectl apply -f redis/redis-statefulset-exporter.yaml
-kubectl rollout status statefulset/sharded-redis
+kubectl rollout status statefulset/sharded-redis -n data
 
 kubectl apply -f prometheus-grafana/prometheus-server-cm-redis.yaml
-kubectl rollout restart deployment/prometheus-server
+kubectl rollout restart deployment/prometheus-server 
 kubectl rollout status deployment/prometheus-server
 ```
 
@@ -240,7 +261,9 @@ kubectl get configmap prometheus-server -o yaml | findstr "job_name"
 Before cleanup, expose Prometheus and Grafana with `LoadBalancer` Services in AKS:
 
 ```powershell
-kubectl patch svc prometheus-server -p '{\"spec\":{\"type\":\"LoadBalancer\"}}'
+# optional for student subscription, test LoadBalancer type for Grafana only to save resources (comment out if you want to expose both)
+# kubectl patch svc prometheus-server -p '{\"spec\":{\"type\":\"LoadBalancer\"}}'
+# optional kubectl port-forward svc/prometheus-server 9090:80
 kubectl patch svc grafana -p '{\"spec\":{\"type\":\"LoadBalancer\"}}'
 
 kubectl get svc prometheus-server -w
@@ -260,15 +283,15 @@ Get the admin password:
 ```bash
 kubectl get secret grafana -o jsonpath="{.data.admin-password}" | %{[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_))}
 ```
-
+Use the `EXTERNAL-IP` of the `grafana` Service to open Grafana in your browser (`http://<grafana-external-ip>`
 
 Inspect logs with:
 
 ```powershell
-kubectl logs deploy/product-api
-kubectl logs deploy/envoy
-kubectl get pods -l app=redis
-kubectl get pods -l app=mysql
+kubectl logs deploy/product-api -n app
+kubectl logs deploy/envoy -n data
+kubectl get pods -l app=redis -n data
+kubectl get pods -l app=mysql -n data
 ```
 
 ### Step 7: Verify service types on the cluster
@@ -371,60 +394,130 @@ kubectl run dns-test --image=busybox:1.28 --restart=Never -it --rm -n data `
 
 Expected: a single A record pointing directly to the `mysql-0` Pod IP.
 
+## Ingress in AKS
+
+An ingress controller provides a single public IP entry point and routes HTTP/HTTPS traffic to internal ClusterIP services by path or hostname — replacing the need for a `LoadBalancer` service per application. It operates at Layer 7 (HTTP), unlike a `LoadBalancer` service which operates at Layer 4 (TCP) and has no awareness of URL paths or hostnames.
+
+```
+Client → Azure Load Balancer (L4) → Ingress Controller (L7) → ClusterIP Service → Pod
+```
+
+### Ingress options on AKS
+
+Microsoft provides three managed ingress solutions. The OSS `ingress-nginx` controller installed via Helm was retired in March 2026 and it requires manual NSG rule management to allow external traffic through.
+
+| Option | API | Hosting | Best for |
+|---|---|---|---|
+| **Application Routing add-on** (managed NGINX) | Ingress API | In-cluster | General purpose; Azure DNS + Key Vault integration |
+| **Application Gateway for Containers** | Ingress + Gateway API | Azure hosted | mTLS, traffic splitting, zone resiliency |
+| **Istio Ingress Gateway** | Istio API | In-cluster | Service mesh deployments |
+
+The **Application Routing add-on** is the recommended starting point: it is fully managed by AKS (automatic NSG rules, controller lifecycle, public IP provisioning), integrates with Azure Key Vault for TLS certificates, and is supported by Microsoft through November 2026.
+
+AKS is aligning with the upstream Kubernetes community by moving to [Gateway API](https://gateway-api.sigs.k8s.io) as the long-term standard for L7 traffic management, superseding the `Ingress` resource. The Application Routing add-on will evolve toward Gateway API support. For new clusters, plan for this migration path:
+
+```
+Ingress API (now)  →  Gateway API / HTTPRoute (future)
+```
+
 ### Step 8: Ingress
 
-An NGINX ingress controller provides a single public IP entry point and routes HTTP traffic to internal ClusterIP services by path or hostname — replacing the need for a `LoadBalancer` service per application.
-
-`springbootapp-service.yaml` has been updated to `type: ClusterIP`. External traffic now flows through the ingress controller only.
-
-Install the NGINX ingress controller via Helm:
+Enable the AKS Application Routing add-on and switch the `product-api` service from `LoadBalancer` to `ClusterIP`. External traffic now flows through the managed ingress controller only.
 
 ```powershell
-helm repo add ingress-nginx https://kubernetes.github.io/ingress-nginx
-helm repo update
-
-helm upgrade --install ingress-nginx ingress-nginx/ingress-nginx `
-  --namespace ingress-nginx `
-  --create-namespace `
-  --set controller.service.type=LoadBalancer
+# Switch product-api to ClusterIP (delete first to avoid type-change conflict)
+kubectl delete svc product-api -n app
+kubectl apply -f springbootapp/springbootapp-service-clusterip.yaml
+ 
+# Enable the managed Application Routing add-on
+az aks approuting enable `
+  --resource-group azurek8-rg `
+  --name azurek8-cluster
 ```
 
-Wait for the controller to get its public IP:
+Apply the ingress manifest. The add-on registers the `webapprouting.kubernetes.azure.com` ingress class automatically:
 
 ```powershell
-kubectl get svc ingress-nginx-controller -n ingress-nginx -w
-```
-
-Apply the updated service and ingress manifest:
-
-```powershell
-kubectl apply -f springbootapp/springbootapp-service.yaml
 kubectl apply -f springbootapp/springbootapp-ingress.yaml
 ```
 
-Verify the ingress resource:
+Verify the ingress resource and wait for an address to be assigned:
 
 ```powershell
-kubectl get ingress -n app
+# Watch for the ADDRESS column to populate
+kubectl get ingress -n app -w
+ 
 kubectl describe ingress product-api -n app
 ```
 
-Expected: `ADDRESS` is the same public IP as the ingress controller. Test the API through the ingress:
+Expected: `ADDRESS` is the public IP provisioned by the add-on, `CLASS` is `webapprouting.kubernetes.azure.com`.
+
+Test the API through the ingress:
 
 ```powershell
-$INGRESS_IP=$(kubectl get svc ingress-nginx-controller -n ingress-nginx `
-  -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+# Get the IP from the add-on's nginx service (lives in app-routing-system namespace)
+$INGRESS_IP = kubectl get service -n app-routing-system nginx `
+  -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
 
-curl.exe "http://$INGRESS_IP/api/products"
+Write-Host "Ingress IP: $INGRESS_IP"
 
-curl.exe -X POST "http://$INGRESS_IP/api/products" `
-  -H "Content-Type: application/json" `
-  -d '{"name":"Laptop","description":"High-performance laptop","price":1299.99,"quantity":50}'
+# POST a new product
+$body = @{
+  name        = "Laptop"
+  description = "High-performance laptop"
+  price       = 1299.99
+  quantity    = 50
+} | ConvertTo-Json
 
-curl.exe "http://$INGRESS_IP/api/products/1"
+Invoke-RestMethod -Uri "http://$INGRESS_IP/api/products" `
+  -Method Post `
+  -ContentType "application/json" `
+  -Body $body
+
+# GET product by ID
+Invoke-RestMethod -Uri "http://$INGRESS_IP/api/products/1" -Method Get
 ```
 
-### Step 9: Cleanup (delete the Azure resource group)
+### Step 9: Grafana Ingress
+
+Rather than patching Grafana to a `LoadBalancer` service (which allocates an extra public IP), route external traffic through the same Application Routing ingress controller used by `product-api`.
+
+Grafana is deployed by Helm into the `default` namespace. The ingress resource must live in the same namespace as the service it targets, so this ingress goes into `default` rather than `app`.
+
+Because Grafana's UI uses relative paths internally, routing it under a sub-path (e.g. `/grafana`) requires rewriting the root URL inside Grafana itself. The simplest approach for a demo is to use a dedicated ingress resource at the root path, which requires no Grafana configuration changes.
+
+Apply `prometheus-grafana/grafana-ingress.yaml`:
+
+```powershell
+kubectl patch svc grafana -p '{\"spec\":{\"type\":\"ClusterIP\"}}'
+
+kubectl apply -f prometheus-grafana/grafana-ingress.yaml
+```
+
+The Application Routing add-on provisions a **separate public IP** per ingress class instance when ingresses exist in multiple namespaces. Verify both ingresses and their addresses:
+
+```powershell
+kubectl get ingress -n app
+kubectl get ingress -n default
+```
+
+Get the Grafana ingress IP:
+
+```powershell
+# The add-on may assign the same or a different IP depending on controller sharing
+kubectl get ingress grafana -n default -o jsonpath="{.status.loadBalancer.ingress[0].ip}"
+```
+
+Get the admin password and open the dashboard:
+
+```powershell
+kubectl get secret grafana -o jsonpath="{.data.admin-password}" `
+  | %{[System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String($_))}
+```
+
+Open `http://<grafana-ingress-ip>` in a browser and log in with `admin` / `<password>`.
+
+### Step 10: Cleanup (delete the Azure resource group)
 
 Delete the entire resource group to remove the AKS cluster and all related Azure resources.
 
