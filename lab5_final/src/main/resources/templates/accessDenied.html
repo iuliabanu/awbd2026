@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>AWBD Auction – Access Denied</title>
+    <script src="/webjars/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/webjars/bootstrap/5.3.3/js/bootstrap.min.js"></script>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/webjars/font-awesome/6.5.2/css/all.min.css"/>
+</head>
+<body>
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6 text-center">
+            <div class="card shadow-sm border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0"><i class="fas fa-ban me-2"></i>Access Denied</h5>
+                </div>
+                <div class="card-body">
+                    <p class="lead">You do not have permission to access this page.</p>
+                    <a th:href="@{/}" class="btn btn-primary me-2">
+                        <i class="fas fa-home me-1"></i> Home
+                    </a>
+                    <a th:href="@{/login}" class="btn btn-outline-secondary">
+                        <i class="fas fa-sign-in-alt me-1"></i> Login as different user
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</body>
+</html>
+
