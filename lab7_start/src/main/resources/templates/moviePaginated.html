@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Movies List</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/webjars/font-awesome/6.5.2/css/all.min.css"/>
+    <style>
+        body { background-color: #f8f9fa; }
+        .hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 2.5rem 2rem; margin-bottom: 2rem; }
+        .hero h1 { font-weight: 700; letter-spacing: 1px; }
+        .hero p { color: #adb5bd; margin-bottom: 0; }
+        .table thead { background-color: #1a1a2e; color: white; }
+        .table tbody tr:hover { background-color: #e9ecef; }
+        .card { border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .page-item.active .page-link { background-color: #1a1a2e; border-color: #1a1a2e; }
+        .page-link { color: #1a1a2e; }
+    </style>
+</head>
+<body>
+<div class="hero">
+    <div class="container">
+        <h1><i class="fa-solid fa-film me-2"></i>Movies</h1>
+        <p>Browse the MongoDB movies collection.</p>
+    </div>
+</div>
+
+<div class="container">
+    <div class="card mb-4">
+        <div class="card-body p-0">
+            <table class="table table-hover mb-0">
+                <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Title</th>
+                    <th>Released</th>
+                    <th>Rating</th>
+                    <th class="text-center">Info</th>
+                    <th class="text-center">Delete</th>
+                </tr>
+                </thead>
+                <tbody>
+                <tr th:each="movie : ${moviePage.content}">
+                    <td class="text-muted small align-middle" th:text="${movie.id}"></td>
+                    <td class="fw-semibold align-middle" th:text="${movie.title}"></td>
+                    <td class="align-middle" th:text="${movie.released}"></td>
+                    <td class="align-middle">
+                        <span class="badge bg-warning text-dark" th:text="${movie.imdb.rating}"></span>
+                    </td>
+                    <td class="text-center align-middle">
+                        <a th:href="@{'/movie/info/' + ${movie.id}}" class="btn btn-sm btn-outline-primary">
+                            <i class="fa-solid fa-circle-info"></i>
+                        </a>
+                    </td>
+                    <td class="text-center align-middle">
+                        <a th:href="@{'/movie/delete/' + ${movie.id}}" class="btn btn-sm btn-outline-danger">
+                            <i class="fa-solid fa-trash"></i>
+                        </a>
+                    </td>
+                </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <nav th:if="${moviePage.totalPages > 0}" aria-label="Movie pagination">
+        <ul class="pagination justify-content-center">
+            <li class="page-item" th:classappend="${moviePage.number == 0} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/movie(size=${moviePage.size}, page=${moviePage.number})}"
+                   aria-label="Previous">
+                    <i class="fa-solid fa-chevron-left"></i>
+                </a>
+            </li>
+            <li th:each="pageNumber : ${#numbers.sequence(1, T(java.lang.Math).min(7, moviePage.totalPages))}"
+                class="page-item"
+                th:classappend="${pageNumber == moviePage.number + 1} ? 'active'">
+                <a class="page-link"
+                   th:text="${pageNumber}"
+                   th:href="@{/movie(size=${moviePage.size}, page=${pageNumber})}">1</a>
+            </li>
+            <li class="page-item disabled" th:if="${moviePage.totalPages > 7}">
+                <span class="page-link">...</span>
+            </li>
+            <li class="page-item" th:classappend="${moviePage.number >= moviePage.totalPages - 1} ? 'disabled'">
+                <a class="page-link"
+                   th:href="@{/movie(size=${moviePage.size}, page=${moviePage.number + 2})}"
+                   aria-label="Next">
+                    <i class="fa-solid fa-chevron-right"></i>
+                </a>
+            </li>
+        </ul>
+    </nav>
+</div>
+
+<script src="/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

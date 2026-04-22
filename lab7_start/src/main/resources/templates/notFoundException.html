@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>404 – Not Found</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/webjars/font-awesome/6.5.2/css/all.min.css"/>
+    <style>
+        body { background-color: #f8f9fa; }
+        .error-hero { background: linear-gradient(135deg, #6a0000 0%, #1a1a2e 100%); color: white; padding: 3rem 2rem; margin-bottom: 2rem; }
+        .error-hero h1 { font-weight: 700; font-size: 2.5rem; }
+        .card { border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); }
+        .card-header { background-color: #6a0000; color: white; font-weight: 600; }
+        .error-code { font-size: 6rem; font-weight: 800; color: #dee2e6; line-height: 1; }
+    </style>
+</head>
+<body>
+
+<div class="error-hero">
+    <div class="container d-flex align-items-center gap-4">
+        <i class="fa-solid fa-circle-exclamation fa-3x"></i>
+        <div>
+            <h1>Resource Not Found</h1>
+            <p class="mb-0 opacity-75">The item you requested could not be located.</p>
+        </div>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="text-center mb-4">
+                <div class="error-code">404</div>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <i class="fa-solid fa-bug me-2"></i>Error Details
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-sm-4 text-muted fw-semibold">Exception type</div>
+                        <div class="col-sm-8">
+                            <code th:text="${exceptionType}">NotFoundException</code>
+                        </div>
+                    </div>
+                    <hr class="my-2"/>
+                    <div class="row">
+                        <div class="col-sm-4 text-muted fw-semibold">Message</div>
+                        <div class="col-sm-8" th:text="${exception.getMessage()}">Details about the error.</div>
+                    </div>
+                </div>
+            </div>
+            <div class="text-center mt-4">
+                <a th:href="@{/index}" class="btn btn-dark">
+                    <i class="fa-solid fa-arrow-left me-1"></i>Back to Movies
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
