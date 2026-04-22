@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Movie Info</title>
+    <link rel="stylesheet" href="/webjars/bootstrap/5.3.3/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="/webjars/font-awesome/6.5.2/css/all.min.css"/>
+    <style>
+        body { background-color: #f8f9fa; }
+        .hero { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); color: white; padding: 2.5rem 2rem; margin-bottom: 2rem; }
+        .hero h1 { font-weight: 700; letter-spacing: 1px; }
+        .card { border: none; box-shadow: 0 2px 12px rgba(0,0,0,0.08); margin-bottom: 1.25rem; }
+        .card-header { background-color: #1a1a2e; color: white; font-weight: 600; }
+        .cast-list li { padding: 0.25rem 0; border-bottom: 1px solid #f0f0f0; }
+        .cast-list li:last-child { border-bottom: none; }
+    </style>
+</head>
+<body>
+
+<div class="hero">
+    <div class="container">
+        <h1><i class="fa-solid fa-clapperboard me-2"></i><span th:text="${movie.title}">Movie Title</span></h1>
+        <a th:href="@{/index}" class="btn btn-outline-light btn-sm mt-2">
+            <i class="fa-solid fa-arrow-left me-1"></i>Back to list
+        </a>
+    </div>
+</div>
+
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+
+            <!-- Plot -->
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-align-left me-2"></i>Plot</div>
+                <div class="card-body">
+                    <p class="card-text" th:text="${movie.plot}">Plot goes here.</p>
+                </div>
+            </div>
+
+            <!-- Cast -->
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-users me-2"></i>Cast</div>
+                <div class="card-body">
+                    <ul class="list-unstyled cast-list mb-0">
+                        <li th:remove="all">Actor 1</li>
+                        <li th:remove="all">Actor 2</li>
+                        <li th:each="cast : ${movie.cast}" th:text="${cast}"></li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Details -->
+            <div class="card">
+                <div class="card-header"><i class="fa-solid fa-star me-2"></i>Details</div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-sm-4 text-muted">Released</div>
+                        <div class="col-sm-8" th:text="${movie.released}">—</div>
+                    </div>
+                    <hr class="my-2"/>
+                    <div class="row">
+                        <div class="col-sm-4 text-muted">IMDB Rating</div>
+                        <div class="col-sm-8">
+                            <span class="badge bg-warning text-dark fs-6" th:text="${movie.imdb.rating}">—</span>
+                        </div>
+                    </div>
+                    <hr class="my-2"/>
+                    <div class="row">
+                        <div class="col-sm-4 text-muted">IMDB Votes</div>
+                        <div class="col-sm-8" th:text="${movie.imdb.votes}">—</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+<script src="/webjars/bootstrap/5.3.3/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>

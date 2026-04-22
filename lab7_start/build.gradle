@@ -1,0 +1,59 @@
+plugins {
+	id 'java'
+	id 'org.springframework.boot' version '3.4.3'
+	id 'io.spring.dependency-management' version '1.1.7'
+}
+
+group = 'com.awbd'
+version = '0.0.1-SNAPSHOT'
+description = 'Demo project for Spring Boot - WebFlux starting point'
+
+java {
+	toolchain {
+		languageVersion = JavaLanguageVersion.of(25)
+	}
+	sourceCompatibility = JavaVersion.VERSION_21
+	targetCompatibility = JavaVersion.VERSION_21
+}
+
+configurations {
+	compileOnly {
+		extendsFrom annotationProcessor
+	}
+}
+
+repositories {
+	mavenCentral()
+}
+
+dependencies {
+	// --- Starting dependencies (blocking stack) ---
+	// Step 1: add reactor-core and logback-classic for test exercises
+	// Step "Refactor Repositories": replace this with spring-boot-starter-data-mongodb-reactive
+	implementation 'org.springframework.boot:spring-boot-starter-data-mongodb'
+
+	// Step "Refactor Controller": replace this with spring-boot-starter-webflux
+	implementation 'org.springframework.boot:spring-boot-starter-web'
+
+	implementation 'org.springframework.boot:spring-boot-starter-thymeleaf'
+
+	implementation 'org.webjars:bootstrap:5.3.3'
+	implementation 'org.webjars:font-awesome:6.5.2'
+
+	compileOnly 'org.projectlombok:lombok:1.18.38'
+	annotationProcessor 'org.projectlombok:lombok:1.18.38'
+
+	developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
+	testImplementation 'org.springframework.boot:spring-boot-starter-test'
+	// Step 1: uncomment the two lines below
+	// testImplementation 'io.projectreactor:reactor-test'
+	// testImplementation 'ch.qos.logback:logback-classic'
+	testCompileOnly 'org.projectlombok:lombok:1.18.38'
+	testAnnotationProcessor 'org.projectlombok:lombok:1.18.38'
+	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+
+tasks.named('test') {
+	useJUnitPlatform()
+}
