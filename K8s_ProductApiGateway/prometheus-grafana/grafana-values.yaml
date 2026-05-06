@@ -1,0 +1,160 @@
+grafana:
+  # Admin credentials — change for production.
+  adminUser: admin
+  adminPassword: admin
+
+# ---------------------------------------------------------------------------
+# Datasources provisioned automatically at startup.
+# No manual UI configuration needed.
+# ---------------------------------------------------------------------------
+datasources:
+  datasources.yaml:
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        url: http://prometheus-server
+        access: proxy
+        isDefault: true
+
+# ---------------------------------------------------------------------------
+# Dashboards provisioned automatically at startup.
+# ---------------------------------------------------------------------------
+dashboardProviders:
+  dashboardproviders.yaml:
+    apiVersion: 1
+    providers:
+      - name: default
+        orgId: 1
+        folder: ""
+        type: file
+        disableDeletion: false
+        editable: true
+        options:
+          path: /var/lib/grafana/dashboards/default
+
+dashboards:
+  default:
+    redis-shards-overview:
+      json: |
+        {
+          "title": "Redis Shards Overview",
+          "uid": "redis-shards",
+          "schemaVersion": 36,
+          "version": 1,
+          "refresh": "10s",
+          "panels": [
+            {
+              "id": 1,
+              "title": "Shard Up",
+              "type": "stat",
+              "gridPos": { "x": 0, "y": 0, "w": 6, "h": 4 },
+              "targets": [
+                {
+                  "expr": "redis_up",
+                  "legendFormat": "{{pod}}"
+                }
+              ],
+              "fieldConfig": {
+                "defaults": {
+                  "mappings": [
+                    { "options": { "0": { "text": "DOWN", "color": "red" }, "1": { "text": "UP", "color": "green" } }, "type": "value" }
+                  ]
+                }
+              }
+            },
+            {
+              "id": 2,
+              "title": "Connected Clients",
+              "type": "timeseries",
+              "gridPos": { "x": 6, "y": 0, "w": 9, "h": 4 },
+              "targets": [
+                {
+                  "expr": "redis_connected_clients",
+                  "legendFormat": "{{pod}}"
+                }
+              ]
+            },
+            {
+              "id": 3,
+              "title": "Used Memory (bytes)",
+              "type": "timeseries",
+              "gridPos": { "x": 0, "y": 4, "w": 8, "h": 4 },
+              "targets": [
+                {
+                  "expr": "redis_memory_used_bytes",
+                  "legendFormat": "{{pod}}"
+                }
+              ]
+            },
+            {
+              "id": 4,
+              "title": "Commands Processed / s",
+              "type": "timeseries",
+              "gridPos": { "x": 8, "y": 4, "w": 8, "h": 4 },
+              "targets": [
+                {
+                  "expr": "rate(redis_commands_processed_total[1m])",
+                  "legendFormat": "{{pod}}"
+                }
+              ]
+            },
+            {
+              "id": 5,
+              "title": "Keys per DB",
+              "type": "bargauge",
+              "gridPos": { "x": 0, "y": 8, "w": 8, "h": 4 },
+              "targets": [
+                {
+                  "expr": "redis_db_keys",
+                  "legendFormat": "{{pod}} {{db}}"
+                }
+              ]
+            },
+            {
+              "id": 6,
+              "title": "Cache Hits",
+              "type": "timeseries",
+              "gridPos": { "x": 8, "y": 8, "w": 8, "h": 4 },
+              "targets": [
+                {
+                  "expr": "rate(redis_keyspace_hits_total{job=\"kubernetes-pods\"}[5m])",
+                  "legendFormat": "{{pod}} hits/s"
+                },
+                {
+                  "expr": "redis_keyspace_hits_total{job=\"kubernetes-pods\"}",
+                  "legendFormat": "{{pod}} total"
+                }
+              ],
+              "fieldConfig": {
+                "defaults": {
+                  "color": { "mode": "palette-classic" },
+                  "custom": { "lineWidth": 2 }
+                }
+              }
+            },
+            {
+              "id": 7,
+              "title": "Cache Misses",
+              "type": "timeseries",
+              "gridPos": { "x": 16, "y": 8, "w": 8, "h": 4 },
+              "targets": [
+                {
+                  "expr": "rate(redis_keyspace_misses_total{job=\"kubernetes-pods\"}[5m])",
+                  "legendFormat": "{{pod}} misses/s"
+                },
+                {
+                  "expr": "redis_keyspace_misses_total{job=\"kubernetes-pods\"}",
+                  "legendFormat": "{{pod}} total"
+                }
+              ],
+              "fieldConfig": {
+                "defaults": {
+                  "color": { "mode": "palette-classic" },
+                  "custom": { "lineWidth": 2 }
+                }
+              }
+            }
+          ]
+        }
+

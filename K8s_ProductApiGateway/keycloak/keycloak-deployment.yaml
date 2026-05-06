@@ -1,0 +1,72 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: keycloak
+  namespace: auth
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: keycloak
+  template:
+    metadata:
+      labels:
+        app: keycloak
+    spec:
+      containers:
+        - name: keycloak
+          image: quay.io/keycloak/keycloak:26.2
+          args:
+            # start-dev uses an embedded H2 database
+            # appropriate for a demo cluster but not for production use.
+            - start-dev
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: KEYCLOAK_ADMIN
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-credentials
+                  key: admin-user
+            - name: KEYCLOAK_ADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-credentials
+                  key: admin-password
+            - name: KC_HOSTNAME
+              value: "keycloak.auth.svc.cluster.local"
+            - name: KC_HOSTNAME_PORT
+              value: "8080"
+            # Disable HTTPS requirement for cluster-internal communication.
+            # TLS is terminated at the Ingress layer; traffic inside the
+            # cluster travels over the private pod network.
+            - name: KC_HOSTNAME_STRICT_HTTPS
+              value: "false"
+            - name: KC_HTTP_ENABLED
+              value: "true"
+            # Proxy mode: Keycloak trusts X-Forwarded-* headers from NGINX.
+            # Required for correct redirect URIs when accessed via the Ingress.
+            - name: KC_PROXY
+              value: "edge"
+          readinessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            failureThreshold: 6
+          livenessProbe:
+            httpGet:
+              path: /realms/master
+              port: 8080
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
