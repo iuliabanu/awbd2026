@@ -1,0 +1,66 @@
+{
+  "realm": "demo",
+  "enabled": true,
+  "displayName": "Demo Realm",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "clients": [
+    {
+      "clientId": "gateway-client",
+      "enabled": true,
+      "clientAuthenticatorType": "client-secret",
+      "secret": "changeme-client-secret",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": true,
+      "publicClient": false,
+      "protocol": "openid-connect",
+      "defaultClientScopes": ["profile", "email", "roles"],
+      "optionalClientScopes": []
+    }
+  ],
+  "roles": {
+    "realm": [
+      {
+        "name": "ROLE_USER",
+        "description": "Standard user — read access to products"
+      },
+      {
+        "name": "ROLE_ADMIN",
+        "description": "Administrator — full CRUD access to products"
+      }
+    ]
+  },
+  "users": [
+    {
+      "username": "testuser",
+      "enabled": true,
+      "email": "testuser@demo.local",
+      "firstName": "Test",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ROLE_USER"]
+    },
+    {
+      "username": "adminuser",
+      "enabled": true,
+      "email": "adminuser@demo.local",
+      "firstName": "Admin",
+      "lastName": "User",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": ["ROLE_USER", "ROLE_ADMIN"]
+    }
+  ]
+}

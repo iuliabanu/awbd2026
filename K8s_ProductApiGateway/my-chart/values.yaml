@@ -1,0 +1,4 @@
+ingress:
+  host: product-api.134.112.146.85.nip.io
+  grafanaHost: grafana.134.112.146.85.nip.io
+

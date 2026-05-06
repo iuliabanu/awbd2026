@@ -1,0 +1,39 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: product-api
+  namespace: app
+  annotations:
+    cert-manager.io/cluster-issuer: zerossl
+spec:
+  ingressClassName: webapprouting.kubernetes.azure.com
+  tls:
+    - hosts:
+        - {{ .Values.ingress.host }}
+      secretName: product-api-tls
+    - hosts:
+        - {{ .Values.ingress.grafanaHost }}
+      secretName: grafana-tls
+  rules:
+    - host: {{ .Values.ingress.host }}
+      http:
+        paths:
+          - path: /api/products
+            pathType: Prefix
+            backend:
+              service:
+                name: product-api
+                #name: gateway
+                port:
+                  number: 80
+    - host: {{ .Values.ingress.grafanaHost }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: grafana
+                port:
+                  number: 80
+

@@ -1,0 +1,53 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway
+  namespace: app
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: gateway
+  template:
+    metadata:
+      labels:
+        app: gateway
+    spec:
+      containers:
+        - name: gateway
+          image: fmiawbd/gateway-service
+          ports:
+            - containerPort: 8080
+          env:
+            # Keycloak issuer URI — Spring Security uses this to discover the
+            # JWKS endpoint and validate incoming JWTs.
+            - name: KEYCLOAK_ISSUER_URI
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-credentials
+                  key: issuer-uri
+            # Internal DNS address of product-api.
+            # The gateway forwards validated requests here.
+            - name: PRODUCT_API_URI
+              value: "http://product-api.app.svc.cluster.local"
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8080
+            initialDelaySeconds: 20
+            periodSeconds: 10
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /actuator/health/liveness
+              port: 8080
+            initialDelaySeconds: 40
+            periodSeconds: 30
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: "256Mi"
+              cpu: "100m"
+            limits:
+              memory: "512Mi"
+              cpu: "300m"

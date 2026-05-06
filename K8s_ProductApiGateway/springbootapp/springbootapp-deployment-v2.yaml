@@ -1,0 +1,50 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: product-api
+  namespace: app
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: product-api
+  template:
+    metadata:
+      labels:
+        app: product-api
+    spec:
+      containers:
+        - name: product-api
+          image: fmiawbd/product-service:v2
+          ports:
+            - containerPort: 8080
+          env:
+            - name: REDIS_HOST
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: redis-host
+            - name: REDIS_PORT
+              valueFrom:
+                secretKeyRef:
+                  name: redis-credentials
+                  key: redis-port
+            - name: MYSQL_HOST
+              value: "mysql.data.svc.cluster.local"
+            - name: MYSQL_PORT
+              value: "3306"
+            - name: MYSQL_USER
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: mysql-user
+            - name: MYSQL_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-credentials
+                  key: mysql-root-password
+            - name: KEYCLOAK_ISSUER_URI
+              valueFrom:
+                secretKeyRef:
+                  name: keycloak-credentials
+                  key: issuer-uri
