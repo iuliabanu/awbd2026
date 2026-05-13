@@ -78,13 +78,17 @@ kubectl rollout status deployment/cert-manager -n cert-manager
 
 
 # --- Create the ClusterIssuer --------------------------------
-kubectl apply -f secrets.yaml
+kubectl apply -f secrets-cert-manager.yaml
 kubectl apply -f cert-manager/cluster-issuer.yaml
 
 
 # --- Get the external IP of the Application Routing ingress controller ---
 $INGRESS_IP = $(kubectl get svc -n app-routing-system nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 Write-Host "Ingress IP: $INGRESS_IP"
+
+# Verify the certificate
+kubectl get certificate -n app
+kubectl describe certificate product-api-tls -n app
 
 # --- Deploy the Spring Boot API with Helm --------------------
 helm upgrade --install my-app ./my-chart `
