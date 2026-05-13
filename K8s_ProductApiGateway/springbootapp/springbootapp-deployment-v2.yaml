@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
         - name: product-api
-          image: fmiawbd/product-service:v2
+          image: <YOUR_DOCKERHUB_USER>/product-service:v2
           ports:
             - containerPort: 8080
           env:

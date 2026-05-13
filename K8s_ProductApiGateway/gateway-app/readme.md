@@ -80,3 +80,19 @@ try {
     -Headers @{ Authorization = "Bearer $USER_TOKEN" }
 } catch { $_.Exception.Response.StatusCode.value__ }
 ```
+
+## Cleanup
+
+Stop and remove containers, networks, and volumes created by `docker-compose up`:
+
+```powershell
+docker compose down -v
+```
+
+To also remove the locally built images:
+
+```powershell
+docker compose down -v --rmi local
+```
+
+

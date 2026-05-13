@@ -42,7 +42,7 @@ kubectl apply -f mysql/mysql-statefulset.yaml
 kubectl apply -f mysql/mysql-service.yaml
 
 # --- Redis + headless service --------------------------------
-kubectl apply -f redis/redis-statefulset.yaml
+kubectl apply -f redis/redis-statefulset-exporter.yaml
 kubectl apply -f redis/redis-service.yaml
 
 # --- Envoy config + deployment + service ---------------------
@@ -62,7 +62,6 @@ helm repo update
 helm upgrade --install prometheus prometheus-community/prometheus
 helm upgrade --install grafana grafana/grafana -f prometheus-grafana/grafana-values.yaml
 
-kubectl apply -f redis/redis-statefulset-exporter.yaml
 kubectl apply -f prometheus-grafana/prometheus-server-cm-redis.yaml
 
 # --- Enable the managed Application Routing add-on -----------
@@ -74,7 +73,9 @@ az aks approuting enable `
 kubectl apply -f https://github.com/cert-manager/cert-manager/releases/download/v1.17.2/cert-manager.yaml
 
 # --- Wait for cert-manager to be ready before applying its secret ---
-kubectl rollout status deployment/cert-manager -n cert-manager
+kubectl rollout status deployment/cert-manager -n cert-manager --timeout=120s
+kubectl rollout status deployment/cert-manager-webhook -n cert-manager --timeout=120s
+kubectl rollout status deployment/cert-manager-cainjector -n cert-manager --timeout=120s
 
 
 # --- Create the ClusterIssuer --------------------------------
@@ -86,14 +87,16 @@ kubectl apply -f cert-manager/cluster-issuer.yaml
 $INGRESS_IP = $(kubectl get svc -n app-routing-system nginx -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
 Write-Host "Ingress IP: $INGRESS_IP"
 
-# Verify the certificate
-kubectl get certificate -n app
-kubectl describe certificate product-api-tls -n app
-
 # --- Deploy the Spring Boot API with Helm --------------------
 helm upgrade --install my-app ./my-chart `
   --set ingress.host="product-api.$INGRESS_IP.nip.io" `
   --set ingress.grafanaHost="grafana.$INGRESS_IP.nip.io"
+
+# Verify the certificate
+kubectl get certificate -n app
+kubectl describe certificate product-api-tls -n app
+
+
 
 
 

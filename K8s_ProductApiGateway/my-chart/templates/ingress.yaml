@@ -23,7 +23,7 @@ spec:
             backend:
               service:
                 name: product-api
-                #name: gateway
+                # name: gateway
                 port:
                   number: 80
     - host: {{ .Values.ingress.grafanaHost }}

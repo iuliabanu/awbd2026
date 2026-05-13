@@ -62,7 +62,7 @@ services:
       start_period: 30s
 
   product-api:
-    image: fmiawbd/product-service:v2
+    image: <YOUR_DOCKERHUB_USER>/product-service:v2
     container_name: product-api
     ports:
       - "8081:8080"
@@ -86,7 +86,7 @@ services:
         condition: service_healthy
 
   gateway:
-    image: fmiawbd/gateway-service
+    image: <YOUR_DOCKERHUB_USER>/gateway-service
     container_name: gateway
     ports:
       - "8082:8080"

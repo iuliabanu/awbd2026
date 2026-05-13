@@ -5,11 +5,11 @@ metadata:
 spec:
   acme:
     server: https://acme.zerossl.com/v2/DV90
-    email: th.iulia84@gmail.com
+    email: <YOUR_EMAIL>
     externalAccountBinding:
-      keyID: cINfdYExqxND_FS5ClycTg             # ← EAB KID from ZeroSSL dashboard
+      keyID: <YOUR_EAB_KEY_ID>
       keySecretRef:
-        name: zerossl-eab-secret        # ← Secret created in Step 5a
+        name: zerossl-eab-secret
         key: secret
     privateKeySecretRef:
       name: zerossl-account-key

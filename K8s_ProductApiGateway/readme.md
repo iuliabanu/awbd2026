@@ -13,6 +13,11 @@ This project demonstrates the deployment of a secured microservice architecture 
 
 ## Project Setup
 
+> **Before running the deployment script, complete the following:**
+>
+> - **`secrets-cert-manager.yaml` and `cert-manager/cluster-issuer.yaml`** — replace the placeholder EAB `hmacKey` and `keyID` values with your own ZeroSSL EAB credentials (obtainable from your ZeroSSL account under *Developer > EAB Credentials for ACME Clients*). [zerossl](https://app.zerossl.com/developer)
+> - **Docker image references** — replace `fmiawbd` with your own Docker Hub username (or registry path) in every `docker build` / `docker push` command and in the corresponding Kubernetes deployment manifests before pushing and deploying.
+
 The current architecture is provisioned end-to-end by running:
 
 ```powershell
@@ -278,17 +283,17 @@ Key claims to note in the output:
 ## Gateway Configuration
 
 ### Step 7: Build and push the gateway image
-Open the separate Spring Boot project located in the `gateway/` directory.
+Open the separate Spring Boot project located in the `gateway-app/` directory.
 
 ```powershell
 # Build the fat JAR
 ./gradlew bootJar
 
 # Build the Docker image
-docker build -t fmiawbd/gateway-service .
+docker build -t <YOUR_DOCKERHUB_USER>/gateway-service .
 
 # Push to Docker Hub (or your registry)
-docker push fmiawbd/gateway-service
+docker push <YOUR_DOCKERHUB_USER>/gateway-service
 ```
 
 
@@ -310,6 +315,16 @@ kubectl get svc gateway -n app
 
 ### Step 9: Re-deploy the Helm chart to reroute the Ingress
 
+> **Before running the Helm upgrade**, update `my-chart/templates/ingress.yaml` to switch the backend service for `/api/products` from `product-api` to `gateway`:
+> ```yaml
+> backend:
+>   service:
+>     #name: product-api   # ← comment this out
+>     name: gateway        # ← uncomment this
+>     port:
+>       number: 80
+> ```
+
 The Ingress backend for `/api/products` is changed from `product-api:80` to
 `gateway:80`. The public hostname and TLS certificate are unchanged.
 
@@ -330,49 +345,21 @@ kubectl describe ingress product-api -n app
 
 Expected: the backend for `/api/products` shows `gateway:80`, not `product-api:80`.
 
-
-### Step 10: Verify JWT enforcement at the gateway
-
-**Without a token — expect 401:**
-
-```powershell
-curl.exe -k -v "https://product-api.$INGRESS_IP.nip.io/api/products/1"
-# Expected: HTTP/1.1 401 Unauthorized
-```
-
-**With a valid token — expect 200:**
-
-```powershell
-# 1. Obtain a token from Keycloak (from inside the cluster or via port-forward)
-kubectl port-forward -n auth svc/keycloak 8180:8080
-
-# In a separate terminal:
-$TOKEN = (curl.exe -s -X POST "http://localhost:8180/realms/demo/protocol/openid-connect/token" `
-  -H "Content-Type: application/x-www-form-urlencoded" `
-  -d "client_id=gateway-client&client_secret=changeme-client-secret&grant_type=password&username=testuser&password=password" |
-  ConvertFrom-Json).access_token
-
-Write-Host "Token: $TOKEN"
-
-# 2. Use the token against the public HTTPS endpoint
-curl.exe -k "https://product-api.$INGRESS_IP.nip.io/api/products/1" `
-  -H "Authorization: Bearer $TOKEN"
-# Expected: 200 OK with product JSON array
-```
-
-## product-api Configuration
+## product-api-app Configuration
 
 
-### Step 11: Build and push the updated image
+### Step 10: Build and push the updated image
+
+In product-api-app directory:
+
 
 ```powershell
 ./gradlew bootJar
-docker build -t fmiawbd/product-service:v2 .
-docker push fmiawbd/product-service:v2
+docker build -t <YOUR_DOCKERHUB_USER>/product-service:v2 .
+docker push <YOUR_DOCKERHUB_USER>/product-service:v2
 ```
 
-
-### Step 12: Apply the updated deployment manifest
+### Step 11: Apply the updated deployment manifest
 
 ```powershell
 kubectl apply -f springbootapp/springbootapp-deployment-v2.yaml
@@ -388,53 +375,91 @@ kubectl exec deployment/product-api -n app -- env | findstr KEYCLOAK
 
 Expected: `KEYCLOAK_ISSUER_URI=http://keycloak.auth.svc.cluster.local:8080/realms/demo`
 
-### Step 13: Verify role enforcement end-to-end
+### Step 12: Verify JWT enforcement at the gateway
 
-First, get tokens for both test users via port-forward (or reuse from Step B):
+**Without a token — expect 401:**
 
 ```powershell
-kubectl port-forward -n auth svc/keycloak 8180:8080
+try {
+  Invoke-RestMethod -Uri "https://product-api.$INGRESS_IP.nip.io/api/products/1" 
+} catch {
+  $_.Exception.Response.StatusCode.value__
+}
+# Expected: 401
+```
+
+**With a valid token — expect 200:**
+
+```powershell
+# 1. Obtain a token from Keycloak (from inside the cluster or via port-forward)
+kubectl port-forward -n auth svc/keycloak 8080:8080
+
+# In a separate terminal:
+$TOKEN = (Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:8080/realms/demo/protocol/openid-connect/token" `
+  -ContentType "application/x-www-form-urlencoded" `
+  -Body "client_id=gateway-client&client_secret=changeme-client-secret&grant_type=password&username=testuser&password=password"
+).access_token
+
+Write-Host "Token: $TOKEN"
+
+# 2. Use the token against the public HTTPS endpoint
+Invoke-RestMethod -Uri "https://product-api.$INGRESS_IP.nip.io/api/products/1" `
+  -Headers @{ Authorization = "Bearer $TOKEN" } `
+# Expected: 200 OK with product JSON array
+```
+
+### Step 13: Verify role enforcement end-to-end
+
  
 # testuser token (ROLE_USER)
-$USER_TOKEN = (curl.exe -s -X POST "http://localhost:8180/realms/demo/protocol/openid-connect/token" `
-  -H "Content-Type: application/x-www-form-urlencoded" `
-  -d "client_id=gateway-client&client_secret=changeme-client-secret&grant_type=password&username=testuser&password=password" |
-  ConvertFrom-Json).access_token
+$USER_TOKEN = (Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:8080/realms/demo/protocol/openid-connect/token" `
+  -ContentType "application/x-www-form-urlencoded" `
+  -Body "client_id=gateway-client&client_secret=changeme-client-secret&grant_type=password&username=testuser&password=password"
+).access_token
  
 # adminuser token (ROLE_USER + ROLE_ADMIN)
-$ADMIN_TOKEN = (curl.exe -s -X POST "http://localhost:8180/realms/demo/protocol/openid-connect/token" `
-  -H "Content-Type: application/json" `
-  -d "client_id=gateway-client&client_secret=changeme-client-secret&grant_type=password&username=adminuser&password=password" |
-  ConvertFrom-Json).access_token
+$ADMIN_TOKEN = (Invoke-RestMethod -Method Post `
+  -Uri "http://localhost:8080/realms/demo/protocol/openid-connect/token" `
+  -ContentType "application/x-www-form-urlencoded" `
+  -Body "client_id=gateway-client&client_secret=changeme-client-secret&grant_type=password&username=adminuser&password=password"
+).access_token
 ```
 
 Run through the access matrix via the public HTTPS endpoint:
 
 ```powershell 
 # testuser can read
-curl.exe -k "https://product-api.$INGRESS_IP.nip.io/api/products/1" -H "Authorization: Bearer $USER_TOKEN"
+Invoke-RestMethod -Uri "https://product-api.$INGRESS_IP.nip.io/api/products/1" `
+  -Headers @{ Authorization = "Bearer $USER_TOKEN" }
 # Expected: 200 OK
  
 # adminuser can read
-curl.exe -k "https://product-api.$INGRESS_IP.nip.io/api/products/1" -H "Authorization: Bearer $ADMIN_TOKEN"
+Invoke-RestMethod -Uri "https://product-api.$INGRESS_IP.nip.io/api/products/1" `
+  -Headers @{ Authorization = "Bearer $ADMIN_TOKEN" } 
 # Expected: 200 OK
  
 # testuser cannot create (ROLE_USER only)
-curl.exe -k -X POST "https://product-api.$INGRESS_IP.nip.io/api/products" `
-  -H "Authorization: Bearer $USER_TOKEN" `
-  -H "Content-Type: application/json" `
-  -d '{"name":"Laptop","description":"Gaming laptop","price":1299.99,"quantity":10}'
+try {
+  Invoke-RestMethod -Method Post -Uri "https://product-api.$INGRESS_IP.nip.io/api/products" `
+    -Headers @{ Authorization = "Bearer $USER_TOKEN" } `
+    -ContentType "application/json" `
+    -Body '{"name":"Laptop","description":"Gaming laptop","price":1299.99,"quantity":10}' `
+} catch { $_.Exception.Response.StatusCode.value__ }
 # Expected: 403 Forbidden
  
 # adminuser can create
-curl.exe -k -X POST "https://product-api.$INGRESS_IP.nip.io/api/products" `
-  -H "Authorization: Bearer $ADMIN_TOKEN" `
-  -H "Content-Type: application/json" `
-  -d '{"name":"Laptop","description":"Gaming laptop","price":1299.99,"quantity":10}'
+Invoke-RestMethod -Method Post -Uri "https://product-api.$INGRESS_IP.nip.io/api/products" `
+  -Headers @{ Authorization = "Bearer $ADMIN_TOKEN" } `
+  -ContentType "application/json" `
+  -Body '{"name":"Laptop","description":"Gaming laptop","price":1299.99,"quantity":10}' `
 # Expected: 201 Created
  
 # no token at all
-curl.exe -k "https://product-api.$INGRESS_IP.nip.io/api/products/1"
+try {
+  Invoke-RestMethod -Uri "https://product-api.$INGRESS_IP.nip.io/api/products/1"
+} catch { $_.Exception.Response.StatusCode.value__ }
 # Expected: 401 Unauthorized
 ```
 
