@@ -1,0 +1,118 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:latest
+    container_name: product-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: password
+      MYSQL_DATABASE: productdb
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+    networks:
+      - product-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:latest
+    container_name: product-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - product-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.2
+    container_name: keycloak
+    command: start-dev --import-realm
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_HOSTNAME_STRICT: "false"
+      KC_HOSTNAME_URL: http://keycloak:8080
+      KC_HOSTNAME_ADMIN_URL: http://keycloak:8080
+      KC_HOSTNAME_STRICT_HTTPS: "false"
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY: edge
+    ports:
+      - "8080:8080"
+    volumes:
+      # Realm JSON is imported once on first start.
+      # Delete the keycloak-data volume to force a re-import.
+      - ./keycloak/demo-realm.json:/opt/keycloak/data/import/demo-realm.json:ro
+      - keycloak-data:/opt/keycloak/data
+    networks:
+      - product-network
+    healthcheck:
+      test: ["CMD", "bash", "-c", "echo > /dev/tcp/127.0.0.1/8080"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+
+  product-api:
+    image: <YOUR_DOCKERHUB_USER>/product-service:v3
+    container_name: product-api
+    ports:
+      - "8081:8080"
+    environment:
+      MYSQL_HOST: mysql
+      MYSQL_PORT: "3306"
+      MYSQL_DATABASE: productdb
+      MYSQL_USER: root
+      MYSQL_PASSWORD: password
+      REDIS_HOST: redis
+      REDIS_PORT: "6379"
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/demo
+    networks:
+      - product-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+
+  gateway:
+    image: <YOUR_DOCKERHUB_USER>/gateway-service
+    container_name: gateway
+    ports:
+      - "8082:8080"
+    environment:
+      KEYCLOAK_ISSUER_URI: http://keycloak:8080/realms/demo
+      PRODUCT_API_URI: http://product-api:8080
+    networks:
+      - product-network
+    depends_on:
+      keycloak:
+        condition: service_healthy
+      product-api:
+        condition: service_started
+
+  discount-service:
+    image: <YOUR_DOCKERHUB_USER>/discount-service
+    container_name: discount-service
+    ports:
+      - "8083:8080"
+    networks:
+      - product-network
+
+volumes:
+  mysql-data:
+  keycloak-data:
+
+networks:
+  product-network:
+    driver: bridge

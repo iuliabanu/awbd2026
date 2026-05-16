@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: keycloak
+  namespace: auth
+spec:
+  selector:
+    app: keycloak
+  ports:
+    - name: http
+      protocol: TCP
+      port: 8080
+      targetPort: 8080
+  # ClusterIP: Keycloak is reachable cluster-internally only.
+  # DNS: keycloak.auth.svc.cluster.local:8080
+  type: ClusterIP
